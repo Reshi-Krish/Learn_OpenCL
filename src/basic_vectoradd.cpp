@@ -1,4 +1,5 @@
-#define CL_USE_DEPRECATED_OPENCL_2_0_APIS
+#define CL_HPP_TARGET_OPENCL_VERSION 300
+#define CL_HPP_MINIMUM_OPENCL_VERSION 200
 #include<CL/opencl.hpp>
 #include<iostream>
 
@@ -58,16 +59,20 @@ int main()
     }
 
 
-    cl::compatibility::make_kernel<cl::Buffer, cl::Buffer, cl::Buffer> simple_add(cl::Kernel(program, "simple_add"));
-    cl::NDRange global(SIZE);
-    simple_add(cl::EnqueueArgs(queue, global), A_d, B_d, C_d).wait();
+    // Bind arguments by index, then launch SIZE work-items (driver picks the work-group size).
+    cl::Kernel simple_add(program, "simple_add");
+    simple_add.setArg(0, A_d);
+    simple_add.setArg(1, B_d);
+    simple_add.setArg(2, C_d);
+    queue.enqueueNDRangeKernel(simple_add, cl::NullRange, cl::NDRange(SIZE), cl::NullRange);
+    queue.finish();
 
     int C_h[SIZE];
     //read result C_d from the device to array C_h
     queue.enqueueReadBuffer(C_d, CL_TRUE, 0, sizeof(int) * SIZE, C_h);
 
     std::cout << " result: \n";
-    for (int i = 0; i<10; i++) {
+    for (int i = 0; i < SIZE; i++) {
         std::cout << C_h[i] << " ";
     }
     std::cout<<std::endl;
